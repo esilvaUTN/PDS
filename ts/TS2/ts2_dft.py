@@ -61,6 +61,14 @@ plt.show()
 var = 4                 #Varianza de ruido uniforme
 b_a = np.sqrt(var*12)
 noise = b_a*np.random.random_sample(N)
+n = np.arange(N)
+
+plt.plot(n, noise)
+plt.title('Señal de ruido')
+plt.xlabel('n')
+plt.ylabel('Amplitud')
+plt.grid(True)
+plt.show()
 
 XX = DFT(noise)         #Calculo de DFT
 n = np.arange(N)

@@ -45,6 +45,23 @@ plt.ylabel('N')
 plt.legend()
 plt.show()
 
+index_rect = np.argmax(np.abs(ft_X_rect[:fs//2, :]), axis=0)  #Estimador de frecuencia
+w_rect = f[index_rect]
+index_blackman = np.argmax(np.abs(ft_X_blackman[:fs//2, :]), axis=0)  #Estimador de frecuencia
+w_blackman = f[index_blackman]
+index_flattop = np.argmax(np.abs(ft_X_flattop[:fs//2, :]), axis=0)  #Estimador de frecuencia
+w_flattop = f[index_flattop]
+
+plt.figure()
+plt.hist(w_rect, bins=20, alpha=0.8, label='Ventana Rectangular', color='blue')
+plt.hist(w_blackman, bins=20, alpha=0.8, label='Ventana Blackman Harris', color='orange')
+plt.hist(w_flattop, bins=20, alpha=0.8, label='Ventana Flat Top', color='green')
+plt.title('Histograma del Estimador de Frecuencia')
+plt.xlabel('Frecuencia')
+plt.ylabel('N')
+plt.legend()
+plt.show()
+
 print("Sesgo ventana rectanfular: " + str(np.mean(a_rect) - a1))
 print("Varianza ventana rectangular: " + str(np.var(a_rect)) + "\n")
 print("Sesgo ventana Blackman Harris: " + str(np.mean(a_blackman) - a1))

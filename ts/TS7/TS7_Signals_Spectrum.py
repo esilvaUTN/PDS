@@ -13,45 +13,61 @@ import scipy.io as sio
 
 def vertical_flaten(a):
 
-    return a.reshape(a.shape[0],1)
+    return a.reshape(a.shape[0], 1)
 
 # Lectura de ECG #
 fs = 1000 # Hz
 mat_struct = sio.loadmat('ECG_TP4.mat')
 
 ecg_one_lead = vertical_flaten(mat_struct['ecg_lead'])
+ecg_one_lead = ecg_one_lead[0:10000]
 N = len(ecg_one_lead)
 
 plt.figure()
-plt.plot(ecg_one_lead[5000:12000])
+plt.plot(ecg_one_lead)
 plt.title('ECG')
 
 spectrum = np.fft.fft(ecg_one_lead, axis=0)/N
 f = np.fft.fftfreq(N, 1/fs)
-periodogram = np.abs(spectrum)**2
+periodogram = fs*(np.abs(spectrum)**2)
 freq, welch = sp.signal.welch(ecg_one_lead, fs=fs, nperseg=N/5, axis=0)
 
-# Find the peak power value
-Bw_amplitude = np.max(welch)/2
-# Find the frequencies where the power is greater than the threshold
-significant_indices = np.where(welch >= Bw_amplitude)[0]  # Indices where the PSD is above the threshold
-significant_frequencies = freq[significant_indices]
-# Bandwidth estimation
-bandwidth = significant_frequencies[-1] - significant_frequencies[0]
+Pperio = np.sum(periodogram[:N//2])
+periodogram = periodogram[:N//2]/Pperio
+Paccum_perio = np.cumsum(periodogram)
+thresh = 0.99
+index = np.where(Paccum_perio >= thresh)[0][0]
+pos_f = f[:N//2]
+Bw = pos_f[index]
+print('Ancho de banda a partir de Periodograma: ' + str(Bw))
 
-print(f"3 dB Bandwidth: {bandwidth} Hz")
+Pwelch = np.sum(welch)
+welch = welch/Pwelch
+Paccum_welch = np.cumsum(welch)
+thresh = 0.99
+index = np.where(Paccum_welch >= thresh)[0][0]
+Bw = freq[index]
+print('Ancho de banda a partir de Welch: ' + str(Bw))
 
 plt.figure();
-plt.semilogy(f[:N//2], periodogram[:N//2])
-plt.title('Periodograma')
-plt.xlabel('f [Hz]')
-plt.ylabel('PSD [dB/Hz]')
-
-plt.figure();
-plt.semilogy(freq, welch)
+plt.semilogy(pos_f, periodogram, label='Periodograma')
+plt.semilogy(freq, welch, label='Welch')
+plt.title('PDS')
 plt.title('Welch')
 plt.xlabel('f [Hz]')
 plt.ylabel('PSD [dB/Hz]')
+plt.legend()
+
+f_mask = (f >= 0) & (f <= Bw)
+trunc_spectrum = spectrum
+trunc_spectrum[~f_mask] = 0
+ecg_rebuilt = np.fft.ifft(trunc_spectrum, axis=0)
+
+plt.figure()
+plt.plot(np.real(ecg_rebuilt))
+plt.grid(True)
+plt.title('Señal temporal reconstruida')
+plt.show()
 
 # Lectura de pletismografía (PPG)  #
 fs = 400 # Hz
@@ -64,23 +80,50 @@ plt.title('PPG')
 
 spectrum = np.fft.fft(ppg, axis=0)/N
 f = np.fft.fftfreq(N, 1/fs)
-periodogram = np.abs(spectrum)**2
+periodogram = fs*(np.abs(spectrum)**2)
 freq, welch = sp.signal.welch(ppg, fs=fs, nperseg=N/5, axis=0)
 
-plt.figure();
-plt.semilogy(f[:N//2], periodogram[:N//2])
-plt.title('Periodograma')
-plt.xlabel('f [Hz]')
-plt.ylabel('PSD [dB/Hz]')
+Pperio = np.sum(periodogram[:N//2])
+periodogram = periodogram[:N//2]/Pperio
+Paccum_perio = np.cumsum(periodogram)
+thresh = 0.99
+index = np.where(Paccum_perio >= thresh)[0][0]
+pos_f = f[:N//2]
+Bw = pos_f[index]
+print('Ancho de banda a partir de Periodograma: ' + str(Bw))
+
+Pwelch = np.sum(welch)
+welch = welch/Pwelch
+Paccum_welch = np.cumsum(welch)
+thresh = 0.99
+index = np.where(Paccum_welch >= thresh)[0][0]
+Bw = freq[index]
+print('Ancho de banda a partir de Welch: ' + str(Bw))
 
 plt.figure();
-plt.semilogy(freq, welch)
+plt.semilogy(pos_f, periodogram, label='Periodograma')
+plt.semilogy(freq, welch, label='Welch')
+plt.title('PDS')
 plt.title('Welch')
 plt.xlabel('f [Hz]')
 plt.ylabel('PSD [dB/Hz]')
+plt.legend()
+
+f_mask = (f >= 0) & (f <= Bw)
+trunc_spectrum = spectrum
+trunc_spectrum[~f_mask] = 0
+ecg_rebuilt = np.fft.ifft(trunc_spectrum, axis=0)
+
+plt.figure()
+plt.plot(np.real(ecg_rebuilt))
+plt.grid(True)
+plt.title('Señal temporal reconstruida')
+plt.show()
+
 
 # Lectura de audio #
-fs, wav_data = sio.wavfile.read('prueba psd.wav')
+fs, wav_data = sio.wavfile.read('silbido.wav')
+N = len(wav_data)
 
 plt.figure()
 plt.plot(wav_data)
@@ -88,17 +131,42 @@ plt.title('Audio')
 
 spectrum = np.fft.fft(wav_data, axis=0)/N
 f = np.fft.fftfreq(N, 1/fs)
-periodogram = np.abs(spectrum)**2
+periodogram = fs*(np.abs(spectrum)**2)
 freq, welch = sp.signal.welch(wav_data, fs=fs, nperseg=N/5, axis=0)
 
-plt.figure();
-plt.semilogy(f[:N//2], periodogram[:N//2])
-plt.title('Periodograma')
-plt.xlabel('f [Hz]')
-plt.ylabel('PSD [dB/Hz]')
+Pperio = np.sum(periodogram[:N//2])
+periodogram = periodogram[:N//2]/Pperio
+Paccum_perio = np.cumsum(periodogram)
+thresh = 0.99
+index = np.where(Paccum_perio >= thresh)[0][0]
+pos_f = f[:N//2]
+Bw = pos_f[index]
+print('Ancho de banda a partir de Periodograma: ' + str(Bw))
+
+Pwelch = np.sum(welch)
+welch = welch/Pwelch
+Paccum_welch = np.cumsum(welch)
+thresh = 0.99
+index = np.where(Paccum_welch >= thresh)[0][0]
+Bw = freq[index]
+print('Ancho de banda a partir de Welch: ' + str(Bw))
 
 plt.figure();
-plt.semilogy(freq, welch)
+plt.semilogy(pos_f, periodogram, label='Periodograma')
+plt.semilogy(freq, welch, label='Welch')
+plt.title('PDS')
 plt.title('Welch')
 plt.xlabel('f [Hz]')
 plt.ylabel('PSD [dB/Hz]')
+plt.legend()
+
+f_mask = (f >= 0) & (f <= Bw)
+trunc_spectrum = spectrum
+trunc_spectrum[~f_mask] = 0
+ecg_rebuilt = np.fft.ifft(trunc_spectrum, axis=0)
+
+plt.figure()
+plt.plot(np.real(ecg_rebuilt))
+plt.grid(True)
+plt.title('Señal temporal reconstruida')
+plt.show()

@@ -46,8 +46,8 @@ nyq_frec = fs / 2
 # Plantilla
 
 # filter design
-ripple = 0.5 # dB
-atenuacion = 40 # dB
+ripple = 1 # dB
+atenuacion = 20 # dB
 
 ws1 = 0.1 #Hz
 wp1 = 0.5 #Hz
@@ -55,8 +55,15 @@ wp2 = 30.0 #Hz
 ws2 = 45.0 #Hz
 
 frecs = np.array([0.0,         ws1,         wp1,     wp2,     ws2,         nyq_frec   ]) / nyq_frec
+frecs_hp = [frecs[0], frecs[1], frecs[2], frecs[5]]
+frecs_lp = [frecs[0], frecs[3], frecs[4], frecs[5]]
+
 gains = np.array([-atenuacion, -atenuacion, -ripple, -ripple, -atenuacion, -atenuacion])
 gains = 10**(gains/20)
+gains_ls = np.array([-atenuacion, -atenuacion, -ripple/2, -ripple/2, -atenuacion, -atenuacion])
+gains_ls = 10**(gains_ls/20)
+gains_hp = [gains_ls[0], gains_ls[1], gains_ls[2], gains_ls[3]]
+gains_lp = [gains_ls[2], gains_ls[3], gains_ls[4], gains_ls[5]]
 
 #IIR
 bp_sos_butter = sig.iirdesign([wp1, wp2], [ws1, ws2], ripple, atenuacion, ftype='butter', output='sos', fs=fs)
@@ -105,17 +112,21 @@ for ii in regs_interes:
 #FIR
 cant_coeficientes = 10001
 num_win = sig.firwin2(cant_coeficientes, frecs, gains, window='blackmanharris')
+num_ls_hp = sig.firls(cant_coeficientes//20+1, frecs_hp, gains_hp)
+num_ls_lp = sig.firls(cant_coeficientes//20+1, frecs_lp, gains_lp)
 den = 1.0
 
 w, h = sig.freqz(num_win, worN=20000)
 plt.figure()
-plt.plot((w/np.pi)*nyq_frec, 20*np.log10(np.abs(h)), label="Filtro FIR")
-plt.legend()
+plt.plot((w/np.pi)*nyq_frec, 20*np.log10(np.abs(h)), label="Filtro FIR Window")
 
-ECG_f_win = sig.lfilter(num_win, den, ecg_one_lead)
+w_hp, h_hp = sig.freqz(num_ls_hp, worN=20000)
+w_lp, h_lp = sig.freqz(num_ls_lp, worN=20000)
+h_ls = h_hp*h_lp
+plt.plot((w_hp/np.pi)*nyq_frec, 20*np.log10(np.abs(h_ls)), label="Filtro FIR Remez")
+plt.legend()    
+
 ECG_f_win = sig.filtfilt(num_win, den, ecg_one_lead)
-
-demora = int((len(num_win)-1)/2)
 demora = 0
 
 # Segmentos de interés con ALTA contaminación
